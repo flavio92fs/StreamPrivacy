@@ -1,0 +1,10 @@
+* text=auto
+*.cs text eol=crlf
+*.cpp text eol=crlf
+*.ps1 text eol=crlf
+*.nsi text eol=crlf
+*.md text eol=lf
+*.yml text eol=lf
+*.png binary
+*.ico binary
+THIRD_PARTY_NOTICES.txt -whitespace

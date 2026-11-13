@@ -1,0 +1,17 @@
+/build/
+/dist/
+/src/bin/
+/Data/
+**/Data/settings.xml
+**/settings.xml
+*.exe
+*.dll
+*.obj
+*.lib
+*.exp
+*.pdb
+*.user
+*.suo
+.vs/
+Thumbs.db
+Desktop.ini
