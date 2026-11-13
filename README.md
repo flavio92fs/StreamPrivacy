@@ -14,20 +14,20 @@ Stream Privacy is a small Windows utility that requests capture exclusion for th
 
 > **No telemetry, no analytics, no accounts, and no outgoing network connections.** Stream Privacy does not send information to its developers or to external services. Its settings stay on your computer. See the [privacy details](PRIVACY.md), including the local metadata it needs to identify windows.
 
-![Stream Privacy interface with the default dark theme](docs/interface-dark.png)
+![Stream Privacy interface in English with the default dark theme](docs/interface-dark-en.png)
 
-*The screenshot uses a demonstration app; it does not certify Signal capture compatibility.*
+*The screenshot uses a demonstration app; appearing here does not certify capture compatibility.*
 
 ## Download
 
-Get the v0.2.4 packages from [GitHub Releases](https://github.com/flavio92fs/StreamPrivacy/releases):
+Get the v0.2.5 packages from [GitHub Releases](https://github.com/flavio92fs/StreamPrivacy/releases):
 
 | Package | Best for | Settings |
 | --- | --- | --- |
-| [Portable ZIP](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.4/StreamPrivacy-0.2.4-win-x64-portable.zip) | Extract and run without installation | `Data/settings.xml` beside the executable |
-| [Per-user installer](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.4/StreamPrivacy-0.2.4-win-x64-setup.exe) | Installation and shortcuts | `%LOCALAPPDATA%\StreamPrivacy\settings.xml` |
+| [Portable ZIP](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.5/StreamPrivacy-0.2.5-win-x64-portable.zip) | Extract and run without installation | `Data/settings.xml` beside the executable |
+| [Per-user installer](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.5/StreamPrivacy-0.2.5-win-x64-setup.exe) | Installation and shortcuts | `%LOCALAPPDATA%\StreamPrivacy\settings.xml` |
 
-Both packages work offline. The installer does not require administrator privileges and does not download runtimes or check for updates. Windows x64 and .NET Framework 4.8 are required; complete exclusion requires Windows 10 version 2004 or later. The current application interface is **Italian**; this English guide translates the controls below.
+Both packages work offline. The installer does not require administrator privileges and does not download runtimes or check for updates. Windows x64 and .NET Framework 4.8 are required; complete exclusion requires Windows 10 version 2004 or later. The application interface is available in **English and Italian**.
 
 Keep the portable executable, `PrivacyHook64.dll`, and `portable.flag` together in a writable folder. The installed version does not need that marker.
 
@@ -36,22 +36,22 @@ The current binaries are **unsigned**. The release includes a **SHA256SUMS** che
 ## Choose what stays private
 
 1. Open the apps you want to exclude, then start Stream Privacy.
-2. Check their rows in **App aperte** (Open apps). One row represents one executable, including its detected windows.
-3. Click **Applica selezione** (Apply selection). Checked apps are remembered; unchecking an open app and applying removes its rule and restores this session's changes.
-4. Leave **Protezione automatica** (Automatic protection) enabled to apply saved rules when apps reopen or create new windows.
-5. Optionally enable **Avvia con Windows** (Start with Windows). It starts in the notification area at your next Windows sign-in.
+2. Check their rows in **Open apps**. One row represents one executable, including its detected windows.
+3. Click **Apply selection**. Checked apps are remembered; unchecking an open app and applying removes its rule and restores this session's changes.
+4. Leave **Automatic protection** enabled to apply saved rules when apps reopen or create new windows.
+5. Optionally enable **Start with Windows**. It starts in the notification area at your next Windows sign-in.
 
-New profiles show **all detected apps** by default. **Solo app di chat** is an optional convenience filter covering WhatsApp, Telegram, Discord, Signal and other recognized chat apps. Uncheck it to see unknown or other apps. Existing profiles retain their previous filter preference. Recognition is not a tested-app list or a compatibility guarantee.
+New profiles show **all detected apps** by default. **Chat apps only** is an optional convenience filter covering WhatsApp, Telegram, Discord, Signal and other recognized chat apps. Uncheck it to see unknown or other apps. Existing profiles retain their previous filter preference. Recognition is not a tested-app list or a compatibility guarantee.
 
-The interface starts with a **dark theme**. Toggle **Tema scuro** (Dark theme) to switch appearance; the preference is saved with your other local settings.
+The interface starts with a **dark theme**. Toggle **Dark theme** to switch appearance. Choose **English** or **Italiano** in the language selector; both theme and language are saved locally. You can also start with `StreamPrivacy.exe --language en` or `StreamPrivacy.exe --language it`.
 
-Closing with **X** or minimizing keeps the utility running. Double-click the shield beside the clock to reopen it. Its menu offers **Ripristina finestra** (Recover window), **Pausa e ripristina tutte** (Pause and restore all), and **Esci e ripristina** (Exit and restore). Simply disabling automatic protection stops future requests; it does not undo already applied exclusions. Saved rules for closed apps remain under **App memorizzate** (Remembered apps).
+Closing with **X** or minimizing keeps the utility running. Double-click the shield beside the clock to reopen it. Its menu offers **Recover window**, **Pause and restore all**, and **Exit and restore**. Simply disabling automatic protection stops future requests; it does not undo already applied exclusions. Saved rules for closed apps remain under **Remembered apps**.
 
 ## Test before sharing
 
-Click **Finestra di prova** (Test window). The harmless test protects itself automatically and reports whether Windows confirms exclusion. **It should remain visible on your own monitor.** Check an OBS recording or the video actually received by someone on Discord.
+Click **Test window**. The harmless test protects itself automatically and reports whether Windows confirms exclusion. **It should remain visible on your own monitor.** Check an OBS recording or the video actually received by someone on Discord.
 
-“Esclusione confermata” means Windows reports the requested setting. It does **not** certify the output of every recorder. [OBS exposes different capture methods](https://obsproject.com/kb/window-capture-sources), and [Discord also uses multiple capture technologies](https://support.discord.com/hc/en-us/articles/9410427556375--Windows-Capturing-Application-Window-for-Screen-Share-and-Go-Live). Recheck after changing your capture source or method.
+“Exclusion confirmed” means Windows reports the requested setting. It does **not** certify the output of every recorder. [OBS exposes different capture methods](https://obsproject.com/kb/window-capture-sources), and [Discord also uses multiple capture technologies](https://support.discord.com/hc/en-us/articles/9410427556375--Windows-Capturing-Application-Window-for-Screen-Share-and-Go-Live). Recheck after changing your capture source or method.
 
 ## How it works
 

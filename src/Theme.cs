@@ -51,6 +51,10 @@ namespace StreamPrivacy
             }
             ThemedTabControl tabs = control as ThemedTabControl;
             if (tabs != null) tabs.DarkTheme = dark;
+            // Keep native combo text legible both on screen and in WM_PRINT rendering.
+            // Windows can ignore owner-draw when printing a themed drop-down list.
+            ComboBox combo = control as ComboBox;
+            if (combo != null) { combo.BackColor = Color.White; combo.ForeColor = Color.Black; }
             Label label = control as Label;
             if (label != null && label.Font.Size < 10) label.ForeColor = Muted(dark);
             foreach (Control child in control.Controls) ApplyControl(child, dark);

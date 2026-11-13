@@ -14,20 +14,20 @@ Stream Privacy è una piccola utilità per Windows che richiede l'esclusione dal
 
 > **Nessuna telemetria, nessuna analisi di utilizzo, nessun account e nessuna connessione di rete in uscita.** Stream Privacy non invia informazioni agli sviluppatori o a servizi esterni. Le impostazioni restano sul tuo computer. Leggi i [dettagli sulla privacy](PRIVACY.md), compresi i metadati locali necessari a identificare le finestre.
 
-![Interfaccia di Stream Privacy con il tema scuro predefinito](docs/interface-dark.png)
+![Interfaccia di Stream Privacy in italiano con il tema scuro predefinito](docs/interface-dark-it.png)
 
-*La schermata usa un'app dimostrativa: non certifica la compatibilità di Signal con la cattura.*
+*La schermata usa un'app dimostrativa: comparire qui non certifica la compatibilità con la cattura.*
 
 ## Download
 
-Scarica i pacchetti v0.2.4 da [GitHub Releases](https://github.com/flavio92fs/StreamPrivacy/releases):
+Scarica i pacchetti v0.2.5 da [GitHub Releases](https://github.com/flavio92fs/StreamPrivacy/releases):
 
 | Pacchetto | Utilizzo | Impostazioni |
 | --- | --- | --- |
-| [ZIP portable](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.4/StreamPrivacy-0.2.4-win-x64-portable.zip) | Estrai e avvia senza installazione | `Data/settings.xml` accanto all'eseguibile |
-| [Installer per utente](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.4/StreamPrivacy-0.2.4-win-x64-setup.exe) | Installazione e collegamenti | `%LOCALAPPDATA%\StreamPrivacy\settings.xml` |
+| [ZIP portable](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.5/StreamPrivacy-0.2.5-win-x64-portable.zip) | Estrai e avvia senza installazione | `Data/settings.xml` accanto all'eseguibile |
+| [Installer per utente](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.5/StreamPrivacy-0.2.5-win-x64-setup.exe) | Installazione e collegamenti | `%LOCALAPPDATA%\StreamPrivacy\settings.xml` |
 
-Entrambi i pacchetti funzionano offline. L'installer non richiede privilegi di amministratore e non scarica componenti né cerca aggiornamenti. Servono Windows x64 e .NET Framework 4.8; l'esclusione completa richiede Windows 10 versione 2004 o successiva. L'interfaccia attuale del programma è **in italiano**.
+Entrambi i pacchetti funzionano offline. L'installer non richiede privilegi di amministratore e non scarica componenti né cerca aggiornamenti. Servono Windows x64 e .NET Framework 4.8; l'esclusione completa richiede Windows 10 versione 2004 o successiva. L'interfaccia del programma è disponibile **in italiano e in inglese**.
 
 Nella versione portable mantieni eseguibile, `PrivacyHook64.dll` e `portable.flag` nella stessa cartella scrivibile. La versione installata non richiede il file marcatore.
 
@@ -43,7 +43,7 @@ Gli eseguibili attuali **non sono firmati digitalmente**. La release include un 
 
 I nuovi profili mostrano **tutte le app rilevate** per impostazione predefinita. **Solo app di chat** è un filtro facoltativo che comprende WhatsApp, Telegram, Discord, Signal e altre chat riconosciute. Togli la spunta per vedere anche app sconosciute o di altro tipo. I profili esistenti conservano la precedente preferenza del filtro. Il riconoscimento non è un elenco di app collaudate e non certifica la compatibilità.
 
-L'interfaccia parte con il **tema scuro**. Usa **Tema scuro** per cambiare aspetto: la preferenza viene salvata insieme alle altre impostazioni locali.
+L'interfaccia parte con il **tema scuro**. Usa **Tema scuro** per cambiare aspetto e scegli **English** o **Italiano** dal selettore della lingua: entrambe le preferenze vengono salvate localmente. Puoi anche avviare `StreamPrivacy.exe --language it` oppure `StreamPrivacy.exe --language en`.
 
 Il tasto **X** e la minimizzazione lasciano il programma attivo. Per riaprirlo fai doppio clic sullo scudo vicino all'orologio. Il suo menu offre **Ripristina finestra**, **Pausa e ripristina tutte** ed **Esci e ripristina**. Disattivare soltanto la protezione automatica ferma le nuove richieste, senza annullare le esclusioni già applicate. Le regole delle app chiuse restano in **App memorizzate**.
 

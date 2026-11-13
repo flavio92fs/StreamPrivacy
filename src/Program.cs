@@ -18,7 +18,7 @@ namespace StreamPrivacy
             if (args.Length > 1 && args[0] == "--profile-path") { File.WriteAllText(args[1], SettingStore.DefaultPath); return 0; }
             if (args.Length > 0 && args[0] == "--capture-test")
             {
-                using (CaptureTestForm capture = new CaptureTestForm(Array.IndexOf(args, "--light") < 0)) Application.Run(capture);
+                using (CaptureTestForm capture = new CaptureTestForm(Array.IndexOf(args, "--light") < 0, LanguageArgument(args) ?? new AppSettings().Language)) Application.Run(capture);
                 return 0;
             }
             if (args.Length > 0 && args[0] == "--demo")
@@ -35,7 +35,7 @@ namespace StreamPrivacy
             if (args.Length > 0 && args[0] == "--release-readiness-test") return ReleaseReadinessTests.Run(args.Length > 1 ? args[1] : "release-readiness-test.txt");
             if (args.Length > 1 && args[0] == "--render")
             {
-                using (MainForm form = new MainForm(true))
+                using (MainForm form = new MainForm(true, null, LanguageArgument(args)))
                 {
                     if (Array.IndexOf(args, "--light") >= 0) ((CheckBox)form.Controls.Find("themeToggle", true)[0]).Checked = false;
                     form.Start(false); Application.DoEvents();
@@ -49,7 +49,7 @@ namespace StreamPrivacy
             {
                 if (!created) { Native.PostMessage(new IntPtr(0xffff), MainForm.ShowMessage, IntPtr.Zero, IntPtr.Zero); return 0; }
                 try {
-                    using (MainForm form = new MainForm())
+                    using (MainForm form = new MainForm(false, null, LanguageArgument(args)))
                     {
                         form.Start(args.Length > 0 && args[0] == "--tray");
                         Application.Run();
@@ -59,6 +59,13 @@ namespace StreamPrivacy
             return 0;
         }
 
+        private static string LanguageArgument(string[] args)
+        {
+            int index = Array.IndexOf(args, "--language");
+            if (index < 0) return null;
+            if (index + 1 < args.Length && (args[index + 1] == "en" || args[index + 1] == "it")) return args[index + 1];
+            throw new ArgumentException("Use --language en or --language it.");
+        }
         private static WindowItem DemoWindow(Process process)
         {
             foreach (WindowItem item in MainForm.EnumerateWindows(true))
@@ -134,7 +141,7 @@ namespace StreamPrivacy
                 WindowItem found = null;
                 PumpUntil(delegate {
                     foreach (WindowItem item in MainForm.EnumerateWindows(true))
-                        if (!before.Contains(item.Pid) && item.ExecutablePath == Application.ExecutablePath && item.Title == "Stream Privacy - verifica cattura") { found = item; return true; }
+                        if (!before.Contains(item.Pid) && item.ExecutablePath == Application.ExecutablePath && (item.Title == "Stream Privacy - verifica cattura" || item.Title == "Stream Privacy - capture test")) { found = item; return true; }
                     return false;
                 }, "Capture-test window not found.");
                 demo = Process.GetProcessById((int)found.Pid);

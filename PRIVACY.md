@@ -11,7 +11,7 @@ The utility must process some information **locally** to identify and protect wi
 | Information | Purpose | Storage or transmission |
 | --- | --- | --- |
 | App/process names, full executable paths, process/thread IDs and window handles | Display app choices, match saved rules and request capture exclusion | Processed locally in memory; never sent to developers or external services |
-| Chosen executable paths, theme, app-filter and automatic-protection options | Remember your choices | XML file on your computer only |
+| Chosen executable paths, language, theme, app-filter and automatic-protection options | Remember your choices | XML file on your computer only |
 | Original display-affinity settings and temporary window markers | Restore changes made by the current session | Kept locally for the current session |
 | Optional Windows startup command | Start beside the clock at sign-in | Per-user Windows registry entry only |
 
@@ -25,9 +25,9 @@ During normal use, Stream Privacy does not read or save chat/window titles, mess
 
 Executable paths may contain your Windows username. They remain in your local settings file. Do not publish that file if you want to keep those paths private. Normal operation creates no activity log. Explicit developer test commands may inspect window titles to locate demonstration windows and write **local** reports or test settings; they do not upload them.
 
-There is no background synchronization or automatic update traffic. Downloading a release from GitHub or following documentation links uses your browser and is separate from running Stream Privacy. This statement describes Stream Privacy's own code; Windows, your browser and the other apps on your computer have their own behavior and privacy policies.
+There is no background synchronization or automatic update traffic. English and Italian translations are embedded in the application; switching language needs no network connection. Downloading a release from GitHub or following documentation links uses your browser and is separate from running Stream Privacy. This statement describes Stream Privacy's own code; Windows, your browser and the other apps on your computer have their own behavior and privacy policies.
 
-To remove saved choices, exit Stream Privacy and delete its settings file. Disable **Avvia con Windows** before removing a portable copy to remove its startup entry. The installed version can be removed through Windows' installed-apps settings; uninstalling preserves local preferences by default. Delete the settings file separately if you want to remove them.
+To remove saved choices, exit Stream Privacy and delete its settings file. Disable **Start with Windows** before removing a portable copy to remove its startup entry. The installed version can be removed through Windows' installed-apps settings; uninstalling preserves local preferences by default. Delete the settings file separately if you want to remove them.
 
 The complete source is available for inspection in [`src`](src). Capture exclusion is separate from privacy of application data: a successful Windows setting does not guarantee that every capture method hides a window. See the README's practical limits.
 
@@ -40,7 +40,7 @@ Per identificare e proteggere le finestre deve elaborare alcune informazioni **i
 | Informazione | Scopo | Salvataggio o trasmissione |
 | --- | --- | --- |
 | Nomi delle app/processi, percorsi completi degli eseguibili, identificativi di processi/thread e finestre | Mostrare le app, applicare le regole e richiedere l'esclusione dalla cattura | Elaborati nella memoria locale; mai inviati agli sviluppatori o a servizi esterni |
-| Percorsi degli eseguibili scelti, tema, filtro delle app e opzioni di protezione automatica | Ricordare le scelte | Solo un file XML sul computer |
+| Percorsi degli eseguibili scelti, lingua, tema, filtro delle app e opzioni di protezione automatica | Ricordare le scelte | Solo un file XML sul computer |
 | Impostazioni originarie di esclusione e marcatori temporanei delle finestre | Ripristinare le modifiche della sessione | Mantenuti localmente durante la sessione |
 | Comando facoltativo di avvio con Windows | Avviare il programma vicino all'orologio all'accesso | Solo una voce del registro del tuo utente |
 
@@ -54,7 +54,7 @@ Nell'uso normale Stream Privacy non legge né salva titoli di chat/finestre, mes
 
 I percorsi degli eseguibili possono contenere il nome del tuo utente Windows: rimangono nel file delle impostazioni locale. Non pubblicare quel file se vuoi mantenere privati i percorsi. L'uso normale non crea un registro delle attività. I comandi espliciti di verifica per sviluppatori possono esaminare i titoli delle finestre per individuare quelle dimostrative e scrivere rapporti o impostazioni di prova **locali**; non li caricano online.
 
-Non ci sono sincronizzazioni in background o aggiornamenti automatici tramite rete. Scaricare una release da GitHub o aprire i collegamenti nella documentazione utilizza il browser ed è separato dall'esecuzione di Stream Privacy. Queste dichiarazioni descrivono il codice di Stream Privacy: Windows, il browser e le altre app del computer hanno comportamenti e informative propri.
+Non ci sono sincronizzazioni in background o aggiornamenti automatici tramite rete. Le traduzioni in inglese e italiano sono incluse nel programma: cambiare lingua non richiede connessioni. Scaricare una release da GitHub o aprire i collegamenti nella documentazione utilizza il browser ed è separato dall'esecuzione di Stream Privacy. Queste dichiarazioni descrivono il codice di Stream Privacy: Windows, il browser e le altre app del computer hanno comportamenti e informative propri.
 
 Per eliminare le scelte salvate, esci dal programma e cancella il file delle impostazioni. Disattiva **Avvia con Windows** prima di rimuovere una copia portable, per eliminare la sua voce di avvio. La versione installata può essere rimossa dalle impostazioni delle app di Windows: la disinstallazione conserva le preferenze locali per impostazione predefinita. Per rimuoverle, cancella separatamente il file delle impostazioni.
 

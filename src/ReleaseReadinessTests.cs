@@ -49,7 +49,7 @@ namespace StreamPrivacy
                 other = Process.Start(new ProcessStartInfo(otherExe, "--demo") { UseShellExecute = false });
                 SettingStore settings = new SettingStore(Path.GetFullPath(report) + ".settings.xml");
                 AppSettings local = new AppSettings(); local.ChatOnly = true; local.AutoProtect = false; settings.Save(local);
-                form = new MainForm(false, settings); form.Start(false);
+                form = new MainForm(false, settings, "en"); form.Start(false);
                 MainForm active = form; ListView list = Field<ListView>(form, "windows");
                 PumpUntil(delegate { return Find(list, "Signal") != null && !Field<bool>(active, "busy"); }, "Synthetic Signal not detected by chat filter.");
                 if (Find(list, "UnlistedDemo") != null) throw new Exception("Chat filter did not filter non-chat demo.");
@@ -68,6 +68,17 @@ namespace StreamPrivacy
                 CheckBox startup = Field<CheckBox>(form, "startup"); startup.Enabled = true;
                 using (Bitmap picture = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(picture, new Rectangle(Point.Empty, form.Size)); picture.Save(screenshot); }
                 startup.Enabled = false;
+                LanguagePicker language = (LanguagePicker)form.Controls.Find("languageSelector", true)[0];
+                if (language.Text != "English" || list.Columns[1].Text != "Windows" || Field<System.Windows.Forms.Button>(form, "protect").Text != "Apply selection" || Find(list, "Signal").SubItems[2].Text != "No exclusion") throw new Exception("English interface was not applied to real controls.");
+                File.Copy(screenshot, Path.GetFullPath(report) + ".dark-en.png", true);
+                language.SelectedItem = "Italiano"; Application.DoEvents();
+                if (settings.Load().Language != "it" || list.Columns[1].Text != "Finestre" || Find(list, "Signal").SubItems[2].Text != "Nessuna esclusione") throw new Exception("Italian switch did not update and persist real controls.");
+                startup.Enabled = true;
+                using (Bitmap picture = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(picture, new Rectangle(Point.Empty, form.Size)); picture.Save(Path.GetFullPath(report) + ".dark-it.png"); }
+                startup.Enabled = false;
+                language.SelectedItem = "English"; Application.DoEvents();
+                if (settings.Load().Language != "en" || list.Columns[1].Text != "Windows") throw new Exception("English choice did not persist.");
+                lines.Add("PASS: actual English/Italian controls, headers and app states switch correctly; language choice persists. Screenshots are rendered from real controls.");
                 CheckBox filter = Field<CheckBox>(form, "chatOnly"); filter.Checked = false;
                 PumpUntil(delegate { return Find(list, "UnlistedDemo") != null && !Field<bool>(active, "busy"); }, "All-app view failed to show unknown app.");
                 lines.Add("PASS: dark/light toggle updates palette and persists choice; disabling chat filter reveals an unlisted app.");

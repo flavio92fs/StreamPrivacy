@@ -55,6 +55,7 @@ namespace StreamPrivacy
         private readonly CheckBox automatic = new CheckBox();
         private readonly CheckBox startup = new CheckBox();
         private readonly CheckBox darkMode = new CheckBox();
+        private readonly LanguagePicker languageSelector = new LanguagePicker();
         private readonly ToolTip filterHint = new ToolTip();
         private readonly Button protect = new ThemedButton();
         private readonly Button remove = new ThemedButton();
@@ -81,11 +82,13 @@ namespace StreamPrivacy
         private bool openPosted;
         private bool recoveryPending;
         private bool statusError;
+        private string statusSource;
+        private UiLanguage ui;
         private readonly Dictionary<string, bool> stagedApps = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, ListViewItem> liveRows = new Dictionary<string, ListViewItem>(StringComparer.OrdinalIgnoreCase);
         private readonly Queue<Action> pendingActions = new Queue<Action>();
 
-        internal MainForm(bool previewMode = false, SettingStore isolatedStore = null)
+        internal MainForm(bool previewMode = false, SettingStore isolatedStore = null, string languageOverride = null)
         {
             preview = previewMode;
             settings = new AppSettings();
@@ -95,7 +98,9 @@ namespace StreamPrivacy
                 try { settings = store.Load(); }
                 catch (Exception error) { settingsError = error.Message; store = null; }
             }
-            Text = "Stream Privacy 0.2.4"; Font = new Font("Segoe UI", 10); DoubleBuffered = true;
+            if (languageOverride != null) settings.Language = UiLanguage.Normalize(languageOverride);
+            ui = new UiLanguage(settings.Language);
+            Text = "Stream Privacy 0.2.5"; Font = new Font("Segoe UI", 10); DoubleBuffered = true;
             BackColor = Color.FromArgb(246, 248, 251); ForeColor = Color.FromArgb(28, 39, 55);
             ClientSize = new Size(1000, 720); MinimumSize = new Size(970, 740);
             StartPosition = FormStartPosition.CenterScreen; AutoScaleMode = AutoScaleMode.Dpi;
@@ -126,7 +131,7 @@ namespace StreamPrivacy
                 settings.DarkMode = darkMode.Checked; ApplyTheme(); SaveSettings();
             };
             options.Controls.Add(darkMode);
-            summary.AutoSize = true; summary.Margin = new Padding(0, 10, 0, 0); options.Controls.Add(summary);
+            summary.Name = "summaryText"; summary.AutoSize = true; summary.Margin = new Padding(0, 10, 0, 0); options.Controls.Add(summary);
             layout.Controls.Add(options, 0, 2);
 
             FlowLayoutPanel filters = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
@@ -135,10 +140,18 @@ namespace StreamPrivacy
             chatOnly.CheckedChanged += delegate { if (!syncing) { settings.ChatOnly = chatOnly.Checked; SaveSettings(); RefreshWindows(); } };
             Button refresh = MakeButton("Aggiorna", false); refresh.Click += delegate { RefreshWindows(); };
             Button demo = MakeButton("Finestra di prova", false); demo.Name = "captureTestButton"; demo.Click += delegate {
-                using (Process test = Process.Start(new ProcessStartInfo(Application.ExecutablePath, "--capture-test" + (settings.DarkMode ? "" : " --light")) { UseShellExecute = false })) { }
+                using (Process test = Process.Start(new ProcessStartInfo(Application.ExecutablePath, "--capture-test" + (settings.DarkMode ? "" : " --light") + " --language " + settings.Language) { UseShellExecute = false })) { }
                 SetStatus("La prova richiede automaticamente l'esclusione. Leggi lo stato nella sua finestra: sul tuo monitor resta visibile, controlla il video trasmesso.", false);
             };
-            filters.Controls.Add(chatOnly); filters.Controls.Add(refresh); filters.Controls.Add(demo); layout.Controls.Add(filters, 0, 3);
+            filters.Controls.Add(chatOnly); filters.Controls.Add(refresh); filters.Controls.Add(demo);
+            languageSelector.Name = "languageSelector"; languageSelector.Width = 110;
+            languageSelector.Margin = new Padding(18, 4, 0, 0); languageSelector.SelectedItem = settings.Language == "it" ? "Italiano" : "English";
+            languageSelector.SelectedIndexChanged += delegate {
+                if (syncing) return;
+                settings.Language = (string)languageSelector.SelectedItem == "Italiano" ? "it" : "en";
+                ApplyLanguage(); SaveSettings();
+            };
+            filters.Controls.Add(languageSelector); layout.Controls.Add(filters, 0, 3);
 
             TabControl tabs = new ThemedTabControl { Dock = DockStyle.Fill };
             TabPage live = new TabPage("App aperte"); TabPage remembered = new TabPage("App memorizzate");
@@ -158,7 +171,7 @@ namespace StreamPrivacy
             SetupButton(protect, "Applica selezione", true); SetupButton(remove, "Rimuovi app e ripristina", false); SetupButton(pause, "Pausa e ripristina tutte", false);
             protect.Click += delegate { ProtectSelected(); }; remove.Click += delegate { RemoveSelectedApp(tabs.SelectedIndex == 1); }; pause.Click += delegate { PauseAndRestore(); };
             actions.Controls.Add(protect); actions.Controls.Add(remove); actions.Controls.Add(pause); layout.Controls.Add(actions, 0, 5);
-            status.Dock = DockStyle.Fill; status.Padding = new Padding(12); status.BackColor = Color.FromArgb(228, 236, 247);
+            status.Name = "statusText"; status.Dock = DockStyle.Fill; status.Padding = new Padding(12); status.BackColor = Color.FromArgb(228, 236, 247);
             SetStatus("La conferma di Windows va verificata nell'anteprima dello stream. Le app scelte vengono salvate sul PC.", false);
             layout.Controls.Add(status, 0, 6);
             layout.Controls.Add(new Label { Text = "Le nuove finestre vengono rilevate periodicamente: possono comparire per un breve intervallo prima della protezione.\nSolo app a 64 bit. Notifiche di Windows e audio esclusi. Per chiudere davvero usa Esci dal menu dell'icona.\nOffline: nessuna telemetria e nessuna connessione verso l'esterno.", Dock = DockStyle.Fill, Padding = new Padding(0, 8, 0, 0), ForeColor = Color.FromArgb(85, 95, 110), Font = new Font("Segoe UI", 9) }, 0, 7);
@@ -176,7 +189,7 @@ namespace StreamPrivacy
             Resize += delegate { if (!preview && !restoringWindow && WindowState == FormWindowState.Minimized) HideToTray(); };
             FormClosing += OnClosing;
             FormClosed += delegate { tray.Visible = false; tray.Dispose(); timer.Dispose(); filterHint.Dispose(); if (!preview) Application.ExitThread(); };
-            FillSavedApps(); UpdateButtons(); ApplyTheme();
+            FillSavedApps(); UpdateButtons(); ApplyTheme(); ApplyLanguage();
         }
 
         internal void Start(bool hidden)
@@ -188,7 +201,7 @@ namespace StreamPrivacy
             if (settingsError != null)
             {
                 SetStatus("Impostazioni non disponibili: " + settingsError, true);
-                if (!preview) tray.ShowBalloonTip(8000, "Stream Privacy: controlla le impostazioni", "Non è stato possibile leggere le impostazioni. Apri il programma dall'icona.", ToolTipIcon.Warning);
+                if (!preview) tray.ShowBalloonTip(8000, Tr("Stream Privacy: controlla le impostazioni"), Tr("Non è stato possibile leggere le impostazioni. Apri il programma dall'icona."), ToolTipIcon.Warning);
             }
             RefreshWindows();
         }
@@ -268,7 +281,7 @@ namespace StreamPrivacy
             if (!trayHintShown)
             {
                 trayHintShown = true;
-                tray.ShowBalloonTip(3000, "Stream Privacy resta attivo", "Per riaprirlo, fai doppio clic sullo scudo vicino all'orologio.", ToolTipIcon.Info);
+                tray.ShowBalloonTip(3000, Tr("Stream Privacy resta attivo"), Tr("Per riaprirlo, fai doppio clic sullo scudo vicino all'orologio."), ToolTipIcon.Info);
             }
         }
         private void StartupChanged(object sender, EventArgs args)
@@ -297,8 +310,22 @@ namespace StreamPrivacy
         }
         private void SetStatus(string text, bool error)
         {
-            status.Text = text; statusError = error;
+            statusSource = text; status.Text = Tr(text); statusError = error;
             Theme.SetState(status, settings == null || settings.DarkMode, error);
+        }
+        private string Tr(string text) { return ui == null ? text : ui.Translate(text); }
+        private void ApplyLanguage()
+        {
+            ui.SetLanguage(settings.Language); ui.Apply(this, tray.ContextMenuStrip);
+            status.Text = Tr(statusSource);
+            filterHint.SetToolTip(chatOnly, Tr("Include Signal, WhatsApp, Telegram, Discord, Teams, Slack e altre chat note. Disattiva il filtro per mostrare tutte le app rilevate."));
+            foreach (ListViewItem row in windows.Items)
+            {
+                row.SubItems[2].Text = Tr(row.SubItems[2].Text);
+                row.SubItems[3].Text = Tr(row.SubItems[3].Text);
+            }
+            foreach (ListViewItem row in savedApps.Items) row.SubItems[1].Text = Tr(row.SubItems[1].Text);
+            UpdateSummary();
         }
         private void ApplyTheme()
         {
@@ -308,8 +335,8 @@ namespace StreamPrivacy
         }
         private void UpdateSummary()
         {
-            summary.Text = settings.ProtectedApps.Count + " app memorizzate";
-            tray.Text = settings.AutoProtect ? "Stream Privacy · automatico" : "Stream Privacy · in pausa";
+            summary.Text = Tr(settings.ProtectedApps.Count + " app memorizzate");
+            tray.Text = Tr(settings.AutoProtect ? "Stream Privacy · automatico" : "Stream Privacy · in pausa");
         }
         private static void SetupList(ListView list)
         {
@@ -338,7 +365,7 @@ namespace StreamPrivacy
             savedApps.BeginUpdate(); savedApps.Items.Clear();
             foreach (string path in settings.ProtectedApps)
             {
-                ListViewItem row = new ListViewItem(new string[] { Path.GetFileNameWithoutExtension(path), "Automatica quando l'app viene aperta" });
+                ListViewItem row = new ListViewItem(new string[] { Path.GetFileNameWithoutExtension(path), Tr("Automatica quando l'app viene aperta") });
                 row.Tag = path; row.ToolTipText = path; savedApps.Items.Add(row); row.Selected = String.Equals(selected, path, StringComparison.OrdinalIgnoreCase);
             }
             savedApps.EndUpdate(); UpdateSummary();
@@ -382,7 +409,7 @@ namespace StreamPrivacy
                 { chosen = settings.ContainsApp(app.Path); stagedApps[app.Path] = chosen; }
                 if (String.IsNullOrEmpty(app.Path)) state = "Percorso non leggibile";
                 plans.Add(new RowPlan { Key = pair.Key, App = app, Checked = chosen,
-                    Values = new string[] { app.App, app.Windows.Count.ToString(), state, settings.ContainsApp(app.Path) ? "Sì" : "No" } });
+                    Values = new string[] { app.App, app.Windows.Count.ToString(), Tr(state), settings.ContainsApp(app.Path) ? Tr("Sì") : "No" } });
             }
             plans.Sort(delegate(RowPlan a, RowPlan b) { int order = StringComparer.OrdinalIgnoreCase.Compare(a.App.App, b.App.App); return order != 0 ? order : StringComparer.OrdinalIgnoreCase.Compare(a.Key, b.Key); });
             bool changed = liveRows.Count != plans.Count;
@@ -582,7 +609,7 @@ namespace StreamPrivacy
             exitRequested = false;
             List<string> restoreErrors = null;
             RunWork(delegate { restoreErrors = session.RestoreAll(); }, delegate {
-                if (restoreErrors.Count > 0) MessageBox.Show(this, "Alcune finestre non sono state ripristinate. Chiudi e riapri le app interessate.", "Stream Privacy", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (restoreErrors.Count > 0) MessageBox.Show(this, Tr("Alcune finestre non sono state ripristinate. Chiudi e riapri le app interessate."), "Stream Privacy", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 allowClose = true; Close();
             });
             exitRequested = false;

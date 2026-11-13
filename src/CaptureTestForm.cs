@@ -15,11 +15,13 @@ namespace StreamPrivacy
         private bool setterSucceeded;
         private int setterError;
         private readonly bool dark;
+        private readonly UiLanguage ui;
 
-        internal CaptureTestForm(bool dark = true)
+        internal CaptureTestForm(bool dark = true, string language = "it")
         {
             this.dark = dark;
-            Text = "Stream Privacy - verifica cattura";
+            ui = new UiLanguage(language);
+            Text = ui.Language == "it" ? "Stream Privacy - verifica cattura" : "Stream Privacy - capture test";
             Font = new Font("Segoe UI", 10);
             BackColor = Color.FromArgb(246, 248, 251);
             ForeColor = Color.FromArgb(28, 39, 55);
@@ -51,7 +53,7 @@ namespace StreamPrivacy
                 Dock = DockStyle.Fill, Padding = new Padding(0, 5, 0, 0)
             }, 0, 1);
 
-            state.Dock = DockStyle.Fill;
+            state.Name = "captureState"; state.Dock = DockStyle.Fill;
             state.Padding = new Padding(12);
             state.BackColor = Color.FromArgb(228, 236, 247);
             state.Text = "Richiesta di esclusione a Windows in preparazione…";
@@ -68,6 +70,8 @@ namespace StreamPrivacy
             }, 0, 4);
             Theme.Apply(this, dark);
             Theme.SetState(state, dark, false);
+            ui.Apply(this, null);
+            state.Text = ui.Translate(state.Text);
         }
 
         // This event precedes the first visible frame. Do not wait for Shown.
@@ -110,6 +114,7 @@ namespace StreamPrivacy
                 state.Text = "Richiesta inviata, ma lo stato non è leggibile.\nCodice errore di lettura: " + readError + ". Non considerare verificata la protezione.";
             else
                 state.Text = "Windows non conferma l'esclusione completa.\nStato letto: 0x" + observed.ToString("X") + " (atteso 0x11).";
+            state.Text = ui.Translate(state.Text);
         }
     }
 }

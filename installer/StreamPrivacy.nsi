@@ -10,7 +10,7 @@ SetDatablockOptimize on
 !include "WinVer.nsh"
 
 !ifndef APP_VERSION
-  !define APP_VERSION "0.2.4"
+  !define APP_VERSION "0.2.5"
 !endif
 !ifndef APP_DIR
   !error "Pass /DAPP_DIR=<built application directory>"

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.5 — 2026-11-13
+
+- Add a genuine English/Italian interface, a saved language selector and `--language en` / `--language it` launch options.
+- Show the English interface in the English README and the Italian interface in the Italian README.
+- Publish v0.2.5 as a regular GitHub release with portable and installer packages.
+- Keep the existing offline behavior, local-only preferences and explicit app/capture-method compatibility limits.
+
 ## 0.2.4 — 2026-11-13
 
 - Add a dark interface, a light-theme option and saved theme preferences.

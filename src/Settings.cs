@@ -13,6 +13,7 @@ namespace StreamPrivacy
         internal bool ChatOnly = false;
         internal bool AutoProtect = true;
         internal bool DarkMode = true;
+        internal string Language = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "it" ? "it" : "en";
         internal readonly List<string> ProtectedApps = new List<string>();
 
         internal static string NormalizeAppPath(string path)
@@ -78,6 +79,12 @@ namespace StreamPrivacy
                 result.ChatOnly = ReadBoolean(root, "chatOnly");
                 result.AutoProtect = ReadBoolean(root, "autoProtect");
                 result.DarkMode = root.SelectSingleNode("darkMode") == null || ReadBoolean(root, "darkMode");
+                XmlNode language = root.SelectSingleNode("language");
+                if (language != null) {
+                    string code = language.InnerText.ToLowerInvariant();
+                    if (code != "en" && code != "it") throw new InvalidDataException("Unsupported interface language.");
+                    result.Language = code;
+                }
                 XmlNode list = root.SelectSingleNode("protectedApps");
                 if (list == null) throw new InvalidDataException("L'elenco delle app salvate è mancante.");
                 foreach (XmlNode node in list.ChildNodes)
@@ -108,6 +115,7 @@ namespace StreamPrivacy
         internal void Save(AppSettings settings)
         {
             if (settings == null) throw new ArgumentNullException("settings");
+            if (settings.Language != "en" && settings.Language != "it") throw new InvalidDataException("Unsupported interface language.");
             List<string> apps = new List<string>();
             HashSet<string> unique = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (string app in settings.ProtectedApps)
@@ -131,6 +139,7 @@ namespace StreamPrivacy
                         writer.WriteElementString("chatOnly", XmlConvert.ToString(settings.ChatOnly));
                         writer.WriteElementString("autoProtect", XmlConvert.ToString(settings.AutoProtect));
                         writer.WriteElementString("darkMode", XmlConvert.ToString(settings.DarkMode));
+                        writer.WriteElementString("language", settings.Language);
                         writer.WriteStartElement("protectedApps");
                         foreach (string app in apps)
                         {
