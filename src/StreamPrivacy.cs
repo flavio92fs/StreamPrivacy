@@ -36,6 +36,8 @@ namespace StreamPrivacy
         [DllImport("user32.dll")] internal static extern bool RedrawWindow(IntPtr window, IntPtr rect, IntPtr region, uint flags);
         [DllImport("PrivacyHook64.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool SetCapturePrivacy(IntPtr window, uint affinity);
+        [DllImport("PrivacyHook64.dll", CallingConvention = CallingConvention.Winapi, CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)] internal static extern bool SetCapturePrivacyChecked(IntPtr window, uint affinity, string marker);
 
         internal static string Error(int error) { return new Win32Exception(error).Message + " (" + error + ")"; }
         internal static bool IsSupportedProcess(uint pid)
@@ -76,32 +78,46 @@ namespace StreamPrivacy
         internal WindowItem Window;
         internal uint Original;
         internal bool Uncertain;
+        internal long ProcessStartTicks;
     }
 
-    internal sealed class ProtectionSession
+    internal sealed class ProtectionSession : IDisposable
     {
         private readonly string marker = "StreamPrivacy.Window." + Guid.NewGuid().ToString("N");
-        private readonly IntPtr markerValue = new IntPtr(0x53505256);
+        private readonly IntPtr markerValue = new IntPtr(RecoverySafety.MarkerValue);
+        private readonly object sync = new object();
+        private readonly RecoverySafety recovery;
         internal readonly Dictionary<IntPtr, ProtectedWindow> Windows = new Dictionary<IntPtr, ProtectedWindow>();
+
+        internal ProtectionSession(string recoveryDirectory = null)
+        {
+            recovery = new RecoverySafety(recoveryDirectory, marker);
+        }
+
+        internal int WatcherProcessId { get { lock (sync) return recovery.WatcherProcessId; } }
 
         internal bool IsSameWindow(ProtectedWindow item)
         {
-            uint pid;
-            uint thread = Native.GetWindowThreadProcessId(item.Window.Handle, out pid);
-            return thread == item.Window.Thread && pid == item.Window.Pid &&
-                Native.GetProp(item.Window.Handle, marker) == markerValue;
+            return RecoverySafety.Matches(item, marker);
         }
 
         internal void Prune()
         {
-            List<IntPtr> gone = new List<IntPtr>();
-            foreach (KeyValuePair<IntPtr, ProtectedWindow> entry in Windows)
-                if (!IsSameWindow(entry.Value)) gone.Add(entry.Key);
-            foreach (IntPtr handle in gone) Windows.Remove(handle);
+            lock (sync)
+            {
+                List<IntPtr> gone = new List<IntPtr>();
+                foreach (KeyValuePair<IntPtr, ProtectedWindow> entry in Windows)
+                    if (!IsSameWindow(entry.Value)) gone.Add(entry.Key);
+                foreach (IntPtr handle in gone) Windows.Remove(handle);
+                if (gone.Count > 0) recovery.Update(Windows.Values, Windows.Count);
+                recovery.Maintain(Windows.Values, Windows.Count);
+            }
         }
 
         internal string Protect(WindowItem item)
         {
+            lock (sync)
+            {
             Prune();
             uint pid;
             if (Native.GetWindowThreadProcessId(item.Handle, out pid) != item.Thread || pid != item.Pid)
@@ -111,45 +127,88 @@ namespace StreamPrivacy
             uint original;
             if (!Native.GetWindowDisplayAffinity(item.Handle, out original))
                 throw new InvalidOperationException("Impossibile leggere lo stato della finestra. " + Native.Error(Marshal.GetLastWin32Error()));
-            if (original == 0x11) return "Windows conferma già l'esclusione. Verifica comunque l'anteprima dello stream.";
+            if (original == 0x11)
+            {
+                if (Windows.ContainsKey(item.Handle)) recovery.Prepare(Windows.Values);
+                return "Windows conferma già l'esclusione. Verifica comunque l'anteprima dello stream.";
+            }
             if (original != 0 && original != 1)
                 throw new InvalidOperationException("La finestra usa un'impostazione di protezione non riconosciuta.");
+            ProtectedWindow tracked = new ProtectedWindow { Window = item, Original = original, Uncertain = true, ProcessStartTicks = RecoverySafety.ProcessStartTicks(item.Pid) };
+            bool newlyTracked = !Windows.ContainsKey(item.Handle);
             if (!Native.SetProp(item.Handle, marker, markerValue)) throw new Win32Exception(Marshal.GetLastWin32Error());
-            ProtectedWindow tracked = new ProtectedWindow { Window = item, Original = original, Uncertain = true };
             // Keep the original even if a timed-out request finishes late. Restore remains available.
-            if (!Windows.ContainsKey(item.Handle)) Windows.Add(item.Handle, tracked);
-            else { tracked = Windows[item.Handle]; tracked.Uncertain = true; }
-            if (!Native.SetCapturePrivacy(item.Handle, 0x11))
+            if (newlyTracked) Windows.Add(item.Handle, tracked);
+            else {
+                tracked = Windows[item.Handle];
+                // If the app changed its setting after a confirmed request,
+                // preserve that new setting when automatic protection reapplies.
+                if (!tracked.Uncertain) tracked.Original = original;
+                tracked.Uncertain = true;
+            }
+            // No affinity mutation occurs until its original value is durable
+            // and an independent recovery companion has acknowledged readiness.
+            try {
+                if (!RecoverySafety.Matches(tracked, marker)) throw new InvalidOperationException("La finestra è cambiata prima della protezione.");
+                recovery.Prepare(Windows.Values);
+            }
+            catch
+            {
+                // Preparing failed before any affinity call. A newly created
+                // marker must not make an untouched window look session-owned.
+                if (newlyTracked)
+                {
+                    Native.RemoveProp(item.Handle, marker);
+                    Windows.Remove(item.Handle);
+                    try { recovery.Update(Windows.Values, Windows.Count); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+                }
+                throw;
+            }
+            if (!Native.SetCapturePrivacyChecked(item.Handle, 0x11, marker))
                 throw new InvalidOperationException("Protezione non confermata: " + Native.Error(Marshal.GetLastWin32Error()) + ". Puoi usare Ripristina per annullare la richiesta.");
             uint affinity;
             if (!Native.GetWindowDisplayAffinity(item.Handle, out affinity) || affinity != 0x11)
                 throw new InvalidOperationException("Windows non conferma l'esclusione. Non considerare protetta questa finestra.");
             tracked.Uncertain = false;
+            recovery.Update(Windows.Values, Windows.Count);
             return "Esclusione confermata da Windows. Ora controlla l'anteprima in OBS e su Discord.";
+            }
         }
 
         internal void Restore(IntPtr handle)
         {
+            lock (sync)
+            {
             ProtectedWindow tracked;
             if (!Windows.TryGetValue(handle, out tracked)) return;
-            if (!IsSameWindow(tracked)) { Windows.Remove(handle); return; }
-            uint current;
-            if (!Native.GetWindowDisplayAffinity(handle, out current)) throw new Win32Exception(Marshal.GetLastWin32Error());
-            // Do not overwrite a protection change made independently by the application.
-            // An uncertain request may finish after a timeout. Send restoration on
-            // the same window thread even when the first read still shows NONE.
-            if ((current == 0x11 || tracked.Uncertain) && !Native.SetCapturePrivacy(handle, tracked.Original))
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            Native.RemoveProp(handle, marker);
+            RecoverySafety.RestoreMarked(tracked, marker);
             Windows.Remove(handle);
+            recovery.Update(Windows.Values, Windows.Count);
+            }
         }
 
         internal List<string> RestoreAll()
         {
+            lock (sync)
+            {
             List<string> errors = new List<string>();
             foreach (IntPtr handle in new List<IntPtr>(Windows.Keys))
                 try { Restore(handle); } catch (Exception error) { errors.Add(error.Message); }
             return errors;
+            }
+        }
+
+        public void Dispose()
+        {
+            lock (sync)
+            {
+                try {
+                    if (Windows.Count == 0) recovery.Update(Windows.Values, 0);
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                finally { recovery.Dispose(); }
+            }
         }
     }
 

@@ -16,16 +16,16 @@ Stream Privacy è una piccola utilità per Windows che richiede l'esclusione dal
 
 ![Interfaccia di Stream Privacy in italiano con il tema scuro predefinito](docs/interface-dark-it.png)
 
-*La schermata usa un'app dimostrativa: comparire qui non certifica la compatibilità con la cattura.*
+*Schermata dell'interfaccia v0.2.5 con un'app dimostrativa: comparire qui non certifica la compatibilità con la cattura.*
 
 ## Download
 
-Scarica i pacchetti v0.2.5 da [GitHub Releases](https://github.com/flavio92fs/StreamPrivacy/releases):
+Scarica i pacchetti v0.2.6 da [GitHub Releases](https://github.com/flavio92fs/StreamPrivacy/releases):
 
 | Pacchetto | Utilizzo | Impostazioni |
 | --- | --- | --- |
-| [ZIP portable](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.5/StreamPrivacy-0.2.5-win-x64-portable.zip) | Estrai e avvia senza installazione | `Data/settings.xml` accanto all'eseguibile |
-| [Installer per utente](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.5/StreamPrivacy-0.2.5-win-x64-setup.exe) | Installazione e collegamenti | `%LOCALAPPDATA%\StreamPrivacy\settings.xml` |
+| [ZIP portable](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.6/StreamPrivacy-0.2.6-win-x64-portable.zip) | Estrai e avvia senza installazione | `Data/settings.xml` accanto all'eseguibile |
+| [Installer per utente](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.6/StreamPrivacy-0.2.6-win-x64-setup.exe) | Installazione e collegamenti | `%LOCALAPPDATA%\StreamPrivacy\settings.xml` |
 
 Entrambi i pacchetti funzionano offline. L'installer non richiede privilegi di amministratore e non scarica componenti né cerca aggiornamenti. Servono Windows x64 e .NET Framework 4.8; l'esclusione completa richiede Windows 10 versione 2004 o successiva. L'interfaccia del programma è disponibile **in italiano e in inglese**.
 
@@ -57,7 +57,17 @@ Premi **Finestra di prova**. La prova non contiene dati personali, si protegge a
 
 Windows offre [`SetWindowDisplayAffinity`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowdisplayaffinity) con `WDA_EXCLUDEFROMCAPTURE`, applicabile a una finestra del processo che la richiama. Per un'altra app, Stream Privacy carica temporaneamente il suo modulo x64 tramite un [hook `SetWindowsHookEx` sul singolo thread](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw), richiede l'impostazione dentro quel processo, ne verifica il valore e rimuove l'hook.
 
-Non installa driver o servizi e non riscrive i file installati delle altre app. Conserva l'impostazione originaria per ripristinare le modifiche effettuate durante la sessione.
+Non installa driver o servizi e non riscrive i file installati delle altre app. Prima di modificare una finestra, salva l'impostazione originaria in un registro locale di recupero e avvia un processo separato dallo stesso eseguibile.
+
+## Recupero dopo una chiusura imprevista
+
+Se il processo principale va in crash o viene terminato, il processo di recupero tenta di ripristinare le finestre modificate durante quella sessione. Il registro identifica quelle finestre: il recupero non rimuove indiscriminatamente le protezioni di tutte le app. Le protezioni già presenti prima dell'intervento di Stream Privacy vengono conservate.
+
+Se viene terminato anche il processo di recupero, all'avvio successivo il programma controlla i registri abbandonati prima di applicare nuove protezioni. I registri si trovano in `Data/Recovery` nella versione portable oppure in `%LOCALAPPDATA%\StreamPrivacy\Recovery` nella versione installata. Contengono identificativi locali di finestre/processi e impostazioni originarie, non il contenuto delle finestre: dettagli in [Privacy](PRIVACY.md).
+
+**Interrompi o metti in pausa lo stream prima di uscire o ripristinare le protezioni.** Le finestre ripristinate possono tornare visibili in una registrazione o condivisione ancora attiva. Lascia disattivata **Protezione automatica** se vuoi che le app interessate restino catturabili dopo averle riaperte.
+
+Un'app bloccata o non accessibile può impedire il ripristino. Esci completamente da quell'app, compreso il processo vicino all'orologio, e riaprila con Stream Privacy in pausa o chiuso. Questa è anche la procedura per le esclusioni rimaste dalla v0.2.5 o da versioni precedenti: quelle versioni non salvavano il registro necessario al recupero automatico.
 
 ## Limiti pratici
 
@@ -65,7 +75,7 @@ Non installa driver o servizi e non riscrive i file installati delle altre app. 
 - Sono supportate soltanto **app x64 compatibili**. App elevate, processi protetti e alcune app Store possono rifiutare il modulo.
 - Le regole usano il percorso completo dell'eseguibile. Se un aggiornamento cambia cartella, seleziona nuovamente l'app.
 - Notifiche di Windows, audio, finestre gestite da un altro eseguibile e metodi di cattura incompatibili non sono coperti.
-- Dopo un arresto anomalo o forzato, una finestra può restare esclusa: chiudi e riapri l'app interessata per ripristinarla.
+- Il recupero richiede che il processo separato resti attivo oppure che Stream Privacy venga avviato nuovamente. Se entrambi i processi vengono terminati, le finestre possono restare escluse fino all'avvio successivo o al riavvio completo delle app interessate.
 - [Microsoft non garantisce la sicurezza dei contenuti tramite questa funzione](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowdisplayaffinity). Il programma riduce il rischio di esposizioni accidentali: verifica sempre il video condiviso.
 
 ## Compilazione e verifiche
@@ -84,9 +94,10 @@ I file compilati si trovano in `src\bin`. Le verifiche di sviluppo usano finestr
 .\src\bin\StreamPrivacy.exe --regression-test selection.txt
 .\src\bin\StreamPrivacy.exe --capture-demo-test demo.txt
 .\src\bin\StreamPrivacy.exe --tray-restore-test tray.txt
+.\src\bin\StreamPrivacy.exe --forced-exit-test forced-exit.txt
 ```
 
-Coprono esclusione e ripristino nativi, regole salvate, selezione multipla, aggiornamento stabile e recupero dall'area icone. Il rendering dell'interfaccia o un test dimostrativo superato non provano che Discord o OBS omettano ogni app: verifica il video effettivamente condiviso. Codice e icona originale sono distribuiti con [licenza MIT](LICENSE).
+Coprono esclusione e ripristino nativi, regole salvate, selezione multipla, aggiornamento stabile, recupero dall'area icone e recupero dopo una terminazione forzata. Il rendering dell'interfaccia o un test dimostrativo superato non provano che Discord o OBS omettano ogni app: verifica il video effettivamente condiviso. Codice e icona originale sono distribuiti con [licenza MIT](LICENSE).
 
 Per generare il portable ZIP e l'installer offline, scarica il compilatore portable dalla [distribuzione ufficiale NSIS](https://sourceforge.net/projects/nsis/files/NSIS%203/3.13/) ed esegui:
 
@@ -96,4 +107,4 @@ Per generare il portable ZIP e l'installer offline, scarica il compilatore porta
 .\scripts\test-installer.ps1 -TestSetupPath .\build\StreamPrivacy-installer-test.exe
 ```
 
-I file della release vengono scritti in `dist`. La prova isolata dell'installer evita registrazioni e collegamenti di sistema reali. Gli strumenti di compilazione si scaricano separatamente: programma e installer distribuiti non li scaricano mai. I componenti NSIS dell'installer mantengono le proprie [licenze di terze parti](THIRD_PARTY_NOTICES.txt).
+I file della release vengono scritti in `dist/<versione>`. La prova isolata dell'installer evita registrazioni e collegamenti di sistema reali. Gli strumenti di compilazione si scaricano separatamente: programma e installer distribuiti non li scaricano mai. I componenti NSIS dell'installer mantengono le proprie [licenze di terze parti](THIRD_PARTY_NOTICES.txt).

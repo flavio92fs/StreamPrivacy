@@ -14,6 +14,7 @@ namespace StreamPrivacy
         [STAThread]
         private static int Main(string[] args)
         {
+            if (args.Length > 0 && args[0] == "--recovery-watch") return RecoverySafety.RunWatcher(args);
             Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
             if (args.Length > 1 && args[0] == "--profile-path") { File.WriteAllText(args[1], SettingStore.DefaultPath); return 0; }
             if (args.Length > 0 && args[0] == "--capture-test")
@@ -33,6 +34,8 @@ namespace StreamPrivacy
             if (args.Length > 0 && args[0] == "--capture-demo-test") return CaptureDemoTest(args.Length > 1 ? args[1] : "capture-demo-test.txt");
             if (args.Length > 0 && args[0] == "--tray-restore-test") return TrayRestoreTests.Run(args.Length > 1 ? args[1] : "tray-restore-test.txt");
             if (args.Length > 0 && args[0] == "--release-readiness-test") return ReleaseReadinessTests.Run(args.Length > 1 ? args[1] : "release-readiness-test.txt");
+            if (args.Length > 0 && args[0] == "--forced-exit-test") return ForcedExitTests.Run(args.Length > 1 ? args[1] : "forced-exit-test.txt");
+            if (args.Length > 0 && args[0] == "--forced-exit-worker") return ForcedExitTests.RunWorker(args);
             if (args.Length > 1 && args[0] == "--render")
             {
                 using (MainForm form = new MainForm(true, null, LanguageArgument(args)))
@@ -49,6 +52,15 @@ namespace StreamPrivacy
             {
                 if (!created) { Native.PostMessage(new IntPtr(0xffff), MainForm.ShowMessage, IntPtr.Zero, IntPtr.Zero); return 0; }
                 try {
+                    try { RecoverySafety.RecoverPending(RecoverySafety.DefaultDirectory); }
+                    catch (Exception error) {
+                        bool italian = (LanguageArgument(args) ?? new AppSettings().Language) == "it";
+                        MessageBox.Show((italian
+                            ? "Il ripristino delle finestre della sessione precedente non è completo. Chiudi e riapri le app interessate, poi riavvia Stream Privacy.\n\n"
+                            : "Recovery of the previous session is incomplete. Fully close and reopen the affected apps, then restart Stream Privacy.\n\n") + new UiLanguage(italian ? "it" : "en").Translate(error.Message),
+                            "Stream Privacy", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return 1;
+                    }
                     using (MainForm form = new MainForm(false, null, LanguageArgument(args)))
                     {
                         form.Start(args.Length > 0 && args[0] == "--tray");
@@ -233,7 +245,7 @@ namespace StreamPrivacy
 
         private static int SelfTest(string report)
         {
-            List<string> lines = new List<string>(); Process demo = null; ProtectionSession session = new ProtectionSession();
+            List<string> lines = new List<string>(); Process demo = null; ProtectionSession session = new ProtectionSession(Path.GetFullPath(report) + ".recovery");
             try
             {
                 demo = Process.Start(new ProcessStartInfo(Application.ExecutablePath, "--demo") { UseShellExecute = false, WindowStyle = ProcessWindowStyle.Hidden });
@@ -273,6 +285,7 @@ namespace StreamPrivacy
             finally
             {
                 session.RestoreAll();
+                session.Dispose();
                 if (demo != null) { try { demo.CloseMainWindow(); if (!demo.WaitForExit(2000)) demo.Kill(); } catch (Exception) { } demo.Dispose(); }
             }
         }

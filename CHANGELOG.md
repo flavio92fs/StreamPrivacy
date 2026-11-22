@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.6 — 2026-11-22
+
+- Add a separate local recovery process that attempts to restore this session's window settings if the main process crashes or is forcibly terminated.
+- Save original settings and validated window/process identities in an atomic local XML journal before applying capture exclusion; check abandoned journals at the next start if the recovery process was also terminated.
+- Preserve pre-existing protections and verify session markers rather than clearing capture exclusion from unrelated windows.
+- Document local recovery files, remaining failure cases, recovery for old versions and the possibility that restored windows become visible in an ongoing stream.
+- Keep English/Italian documentation, portable and offline installer packages, and no telemetry or outgoing network connections.
+
 ## 0.2.5 — 2026-11-13
 
 - Add a genuine English/Italian interface, a saved language selector and `--language en` / `--language it` launch options.

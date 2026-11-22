@@ -3,7 +3,7 @@ $ErrorActionPreference='Stop'
 $Executable=(Resolve-Path -LiteralPath $Executable).Path
 New-Item -ItemType Directory -Force -Path $ReportDirectory | Out-Null
 $ReportDirectory=(Resolve-Path -LiteralPath $ReportDirectory).Path
-foreach ($name in @('self-test','integration-test','regression-test','capture-demo-test','tray-restore-test','release-readiness-test')) {
+foreach ($name in @('self-test','integration-test','regression-test','capture-demo-test','tray-restore-test','release-readiness-test','forced-exit-test')) {
     $report=Join-Path $ReportDirectory ($name+'.txt')
     $run=Start-Process -FilePath $Executable -ArgumentList @("--$name",('"'+$report+'"')) -WindowStyle Hidden -Wait -PassThru
     if (Test-Path -LiteralPath $report) { Get-Content -LiteralPath $report }

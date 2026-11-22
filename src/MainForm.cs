@@ -46,7 +46,7 @@ namespace StreamPrivacy
     internal sealed class MainForm : Form
     {
         internal static readonly uint ShowMessage = Native.RegisterWindowMessage("StreamPrivacy.Show.{BFE25F87-070A-4012-9103-C59799CA5ED1}");
-        private readonly ProtectionSession session = new ProtectionSession();
+        private readonly ProtectionSession session;
         private readonly ListView windows = new BufferedListView();
         private readonly ListView savedApps = new BufferedListView();
         private readonly Label status = new Label();
@@ -91,6 +91,7 @@ namespace StreamPrivacy
         internal MainForm(bool previewMode = false, SettingStore isolatedStore = null, string languageOverride = null)
         {
             preview = previewMode;
+            session = new ProtectionSession(isolatedStore == null ? null : isolatedStore.RecoveryDirectory);
             settings = new AppSettings();
             if (!preview)
             {
@@ -100,7 +101,7 @@ namespace StreamPrivacy
             }
             if (languageOverride != null) settings.Language = UiLanguage.Normalize(languageOverride);
             ui = new UiLanguage(settings.Language);
-            Text = "Stream Privacy 0.2.5"; Font = new Font("Segoe UI", 10); DoubleBuffered = true;
+            Text = "Stream Privacy 0.2.6"; Font = new Font("Segoe UI", 10); DoubleBuffered = true;
             BackColor = Color.FromArgb(246, 248, 251); ForeColor = Color.FromArgb(28, 39, 55);
             ClientSize = new Size(1000, 720); MinimumSize = new Size(970, 740);
             StartPosition = FormStartPosition.CenterScreen; AutoScaleMode = AutoScaleMode.Dpi;
@@ -188,7 +189,7 @@ namespace StreamPrivacy
             timer.Interval = 750; timer.Tick += delegate { RefreshWindows(); };
             Resize += delegate { if (!preview && !restoringWindow && WindowState == FormWindowState.Minimized) HideToTray(); };
             FormClosing += OnClosing;
-            FormClosed += delegate { tray.Visible = false; tray.Dispose(); timer.Dispose(); filterHint.Dispose(); if (!preview) Application.ExitThread(); };
+            FormClosed += delegate { tray.Visible = false; tray.Dispose(); timer.Dispose(); filterHint.Dispose(); if (!busy) session.Dispose(); if (!preview) Application.ExitThread(); };
             FillSavedApps(); UpdateButtons(); ApplyTheme(); ApplyLanguage();
         }
 
@@ -617,7 +618,9 @@ namespace StreamPrivacy
         private void OnClosing(object sender, FormClosingEventArgs args)
         {
             if (preview || allowClose) return;
-            if (args.CloseReason == CloseReason.WindowsShutDown || args.CloseReason == CloseReason.TaskManagerClosing)
+            if (args.CloseReason == CloseReason.TaskManagerClosing)
+            { args.Cancel = true; RequestExit(); return; }
+            if (args.CloseReason == CloseReason.WindowsShutDown)
             { timer.Stop(); tray.Visible = false; return; }
             args.Cancel = true; HideToTray();
         }

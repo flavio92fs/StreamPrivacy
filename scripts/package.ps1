@@ -1,12 +1,13 @@
 param(
     [Parameter(Mandatory = $true)][string]$NsisPath,
-    [string]$Version = '0.2.5',
+    [string]$Version = '0.2.6',
+    [string]$AppDirectory,
     [switch]$SkipBuild,
     [switch]$BuildTestInstaller
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-$app = Join-Path $repo 'build\app'
+$app = if ($AppDirectory) { [IO.Path]::GetFullPath($AppDirectory) } else { Join-Path $repo 'build\app' }
 $dist = Join-Path $repo ('dist\' + $Version)
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Version must be major.minor.patch.' }
 $compiler = (Resolve-Path -LiteralPath $NsisPath).Path

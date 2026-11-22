@@ -16,16 +16,16 @@ Stream Privacy is a small Windows utility that requests capture exclusion for th
 
 ![Stream Privacy interface in English with the default dark theme](docs/interface-dark-en.png)
 
-*The screenshot uses a demonstration app; appearing here does not certify capture compatibility.*
+*Interface screenshot from v0.2.5, using a demonstration app; appearing here does not certify capture compatibility.*
 
 ## Download
 
-Get the v0.2.5 packages from [GitHub Releases](https://github.com/flavio92fs/StreamPrivacy/releases):
+Get the v0.2.6 packages from [GitHub Releases](https://github.com/flavio92fs/StreamPrivacy/releases):
 
 | Package | Best for | Settings |
 | --- | --- | --- |
-| [Portable ZIP](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.5/StreamPrivacy-0.2.5-win-x64-portable.zip) | Extract and run without installation | `Data/settings.xml` beside the executable |
-| [Per-user installer](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.5/StreamPrivacy-0.2.5-win-x64-setup.exe) | Installation and shortcuts | `%LOCALAPPDATA%\StreamPrivacy\settings.xml` |
+| [Portable ZIP](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.6/StreamPrivacy-0.2.6-win-x64-portable.zip) | Extract and run without installation | `Data/settings.xml` beside the executable |
+| [Per-user installer](https://github.com/flavio92fs/StreamPrivacy/releases/download/v0.2.6/StreamPrivacy-0.2.6-win-x64-setup.exe) | Installation and shortcuts | `%LOCALAPPDATA%\StreamPrivacy\settings.xml` |
 
 Both packages work offline. The installer does not require administrator privileges and does not download runtimes or check for updates. Windows x64 and .NET Framework 4.8 are required; complete exclusion requires Windows 10 version 2004 or later. The application interface is available in **English and Italian**.
 
@@ -57,7 +57,17 @@ Click **Test window**. The harmless test protects itself automatically and repor
 
 Windows provides [`SetWindowDisplayAffinity`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowdisplayaffinity) with `WDA_EXCLUDEFROMCAPTURE`. It applies to a window owned by the calling process. For another app, Stream Privacy temporarily loads its x64 helper through a thread-specific [`SetWindowsHookEx` hook](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowshookexw), requests the setting inside that process, reads it back, and removes the hook.
 
-It installs no driver or service and does not rewrite other apps' installed files. The original setting is retained for restoration of this session's changes.
+It installs no driver or service and does not rewrite other apps' installed files. Before changing a window, it records the original setting in a local recovery journal and starts a separate recovery process from the same executable.
+
+## Recovery after an unexpected exit
+
+If the main process crashes or is terminated, the recovery process attempts to restore the windows changed by that session. The journal identifies those windows so recovery does not clear every app's capture protection. Protection that was already present before Stream Privacy intervened is preserved.
+
+If the recovery process is also terminated, the next start checks abandoned journals before applying new protection. Journals are stored in `Data/Recovery` for a portable copy, or `%LOCALAPPDATA%\StreamPrivacy\Recovery` for an installed copy. They contain local window/process identifiers and original settings, not window content; see [Privacy](PRIVACY.md).
+
+**Stop or pause your stream before exiting or restoring protection.** Restored windows can become visible in an ongoing recording or screen share. Keep **Automatic protection** disabled if you want affected apps to remain capturable after reopening them.
+
+An unresponsive or inaccessible app can prevent restoration. Exit that app completely, including its notification-area process, and reopen it while Stream Privacy is paused or closed. This is also the recovery procedure for exclusions left behind by v0.2.5 or earlier: those versions did not save the journal needed for automatic recovery.
 
 ## Practical limits
 
@@ -65,7 +75,7 @@ It installs no driver or service and does not rewrite other apps' installed file
 - Only supported **x64 apps** are targeted. Elevated, protected or some Store apps may reject the helper.
 - Rules match the full executable path. Reselect an app if an update moves it to a new folder.
 - Windows notifications, audio, windows belonging to another executable, and incompatible capture methods are not covered.
-- A crash or forced termination can leave a window excluded. Close and reopen the affected app to reset it.
+- Recovery requires either the separate recovery process to remain running or Stream Privacy to be started again. If both processes are terminated, affected windows can remain excluded until the next start or until the affected apps are fully restarted.
 - [Microsoft does not guarantee content security through display affinity](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowdisplayaffinity). Use the tool to reduce accidental exposure and verify the actual shared output.
 
 ## Build and checks
@@ -84,9 +94,10 @@ The output is in `src\bin`. Development checks use harmless demo windows and wri
 .\src\bin\StreamPrivacy.exe --regression-test selection.txt
 .\src\bin\StreamPrivacy.exe --capture-demo-test demo.txt
 .\src\bin\StreamPrivacy.exe --tray-restore-test tray.txt
+.\src\bin\StreamPrivacy.exe --forced-exit-test forced-exit.txt
 ```
 
-These checks cover native exclusion/restoration, saved rules, multiple selections, stable refresh, and tray recovery. Rendering an interface or passing a demo test does not prove that Discord or OBS will omit every app. Test the actual shared video. Code and the original icon are released under the [MIT license](LICENSE).
+These checks cover native exclusion/restoration, saved rules, multiple selections, stable refresh, tray recovery and recovery after forced termination. Rendering an interface or passing a demo test does not prove that Discord or OBS will omit every app. Test the actual shared video. Code and the original icon are released under the [MIT license](LICENSE).
 
 To build the portable ZIP and offline installer, obtain the portable compiler from the [official NSIS distribution](https://sourceforge.net/projects/nsis/files/NSIS%203/3.13/) and run:
 
@@ -96,4 +107,4 @@ To build the portable ZIP and offline installer, obtain the portable compiler fr
 .\scripts\test-installer.ps1 -TestSetupPath .\build\StreamPrivacy-installer-test.exe
 ```
 
-Release files are written to `dist`. The isolated installer test avoids real registration and system shortcuts. Build tools are obtained separately; the delivered app and installer never download them. NSIS installer components have their own [third-party notices](THIRD_PARTY_NOTICES.txt).
+Release files are written to `dist/<version>`. The isolated installer test avoids real registration and system shortcuts. Build tools are obtained separately; the delivered app and installer never download them. NSIS installer components have their own [third-party notices](THIRD_PARTY_NOTICES.txt).

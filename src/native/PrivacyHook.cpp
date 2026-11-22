@@ -7,6 +7,7 @@
 namespace {
 constexpr DWORD kExcludeFromCapture = 0x00000011;
 constexpr WPARAM kMessageSignature = 0x53505256; // "SPRV"
+constexpr ULONG_PTR kMarkerValue = 0x53505256;
 constexpr wchar_t kControlMessage[] =
     L"StreamPrivacy.SetCapturePrivacy.{A7244D43-721B-479C-A2DA-F1BDC29F64B7}";
 
@@ -25,14 +26,21 @@ LRESULT CALLBACK CaptureHookProc(int code, WPARAM wParam, LPARAM lParam) {
         const auto* message = reinterpret_cast<const CWPSTRUCT*>(lParam);
         const UINT controlMessage = RegisterWindowMessageW(kControlMessage);
         if (controlMessage != 0 && message->message == controlMessage &&
-            message->wParam == kMessageSignature &&
+            (message->wParam & MAXDWORD) == kMessageSignature &&
             message->lParam >= 0 &&
             static_cast<ULONG_PTR>(message->lParam) <= MAXDWORD) {
             const DWORD affinity = static_cast<DWORD>(message->lParam);
+            const ULONG_PTR atomValue = message->wParam >> 32;
+            const ATOM markerAtom = static_cast<ATOM>(atomValue);
             DWORD owner = 0;
             GetWindowThreadProcessId(message->hwnd, &owner);
             if (owner == GetCurrentProcessId() && IsTopLevel(message->hwnd) &&
-                IsSupportedAffinity(affinity)) {
+                IsSupportedAffinity(affinity) && atomValue <= MAXWORD &&
+                (markerAtom == 0 || GetPropW(message->hwnd, MAKEINTATOM(markerAtom)) ==
+                    reinterpret_cast<HANDLE>(kMarkerValue))) {
+                // A checked request verifies ownership on the window's own UI
+                // thread, immediately before the setting changes. A recycled
+                // HWND cannot inherit a previous session's restoration request.
                 SetWindowDisplayAffinity(message->hwnd, affinity);
             }
         }
@@ -79,13 +87,17 @@ bool HasMatchingArchitecture(DWORD processId) {
 // Success means the requested affinity was read back from Windows. It does NOT
 // mean an OBS/Discord capture has been visually verified. A composition can occur
 // after this call returns, and capture methods can behave differently.
-extern "C" __declspec(dllexport)
-BOOL WINAPI SetCapturePrivacy(HWND window, DWORD affinity) {
+static BOOL SetCapturePrivacyCore(HWND window, DWORD affinity, ATOM markerAtom) {
     if (!IsSupportedAffinity(affinity)) {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
     if (!IsTopLevel(window) || window == GetDesktopWindow()) {
+        SetLastError(ERROR_INVALID_WINDOW_HANDLE);
+        return FALSE;
+    }
+    if (markerAtom != 0 && GetPropW(window, MAKEINTATOM(markerAtom)) !=
+            reinterpret_cast<HANDLE>(kMarkerValue)) {
         SetLastError(ERROR_INVALID_WINDOW_HANDLE);
         return FALSE;
     }
@@ -126,7 +138,8 @@ BOOL WINAPI SetCapturePrivacy(HWND window, DWORD affinity) {
     DWORD error = ERROR_SUCCESS;
     DWORD_PTR messageResult = 0;
     SetLastError(ERROR_SUCCESS);
-    if (!SendMessageTimeoutW(window, controlMessage, kMessageSignature,
+    const WPARAM signature = kMessageSignature | (static_cast<WPARAM>(markerAtom) << 32);
+    if (!SendMessageTimeoutW(window, controlMessage, signature,
             static_cast<LPARAM>(affinity),
             SMTO_BLOCK | SMTO_ABORTIFHUNG | SMTO_ERRORONEXIT,
             2000, &messageResult)) {
@@ -138,7 +151,8 @@ BOOL WINAPI SetCapturePrivacy(HWND window, DWORD affinity) {
         if (!GetWindowDisplayAffinity(window, &observedAffinity)) {
             error = GetLastError();
             if (error == ERROR_SUCCESS) error = ERROR_GEN_FAILURE;
-        } else if (observedAffinity != affinity) {
+        } else if (observedAffinity != affinity || (markerAtom != 0 &&
+                GetPropW(window, MAKEINTATOM(markerAtom)) != reinterpret_cast<HANDLE>(kMarkerValue))) {
             // WH_CALLWNDPROC cannot return the in-target setter's LastError.
             // Report an unconfirmed postcondition instead of false success.
             error = ERROR_GEN_FAILURE;
@@ -153,4 +167,24 @@ BOOL WINAPI SetCapturePrivacy(HWND window, DWORD affinity) {
     }
     SetLastError(error);
     return error == ERROR_SUCCESS ? TRUE : FALSE;
+}
+
+extern "C" __declspec(dllexport)
+BOOL WINAPI SetCapturePrivacy(HWND window, DWORD affinity) {
+    return SetCapturePrivacyCore(window, affinity, 0);
+}
+
+extern "C" __declspec(dllexport)
+BOOL WINAPI SetCapturePrivacyChecked(HWND window, DWORD affinity, LPCWSTR marker) {
+    if (marker == nullptr || marker[0] == L'\0') {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+    const ATOM atom = GlobalAddAtomW(marker);
+    if (atom == 0) return FALSE;
+    const BOOL result = SetCapturePrivacyCore(window, affinity, atom);
+    const DWORD error = GetLastError();
+    GlobalDeleteAtom(atom);
+    SetLastError(error);
+    return result;
 }

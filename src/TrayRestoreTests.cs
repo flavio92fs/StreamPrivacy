@@ -23,7 +23,7 @@ namespace StreamPrivacy
             List<string> lines = new List<string>();
             Process demo = null;
             MainForm controller = null;
-            ProtectionSession externalSession = new ProtectionSession();
+            ProtectionSession externalSession = new ProtectionSession(Path.GetFullPath(report) + ".external-recovery");
             try
             {
                 SettingStore isolated = new SettingStore(Path.GetFullPath(report) + ".settings.xml");

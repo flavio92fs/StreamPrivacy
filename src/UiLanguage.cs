@@ -116,6 +116,16 @@ namespace StreamPrivacy
             {". Puoi usare Ripristina per annullare la richiesta.", ". You can use Restore to undo the request."},
             {"Windows non conferma l'esclusione. Non considerare protetta questa finestra.", "Windows does not confirm exclusion. Do not treat this window as protected."},
             {"Esclusione confermata da Windows. Ora controlla l'anteprima in OBS e su Discord.", "Windows confirms exclusion. Now check the actual OBS or Discord video."},
+            {"Impossibile avviare il recupero delle finestre. Nessuna nuova protezione applicata.", "Unable to start window recovery. No new protection was applied."},
+            {"Il recupero delle finestre non è pronto. Nessuna nuova protezione applicata.", "Window recovery is not ready. No new protection was applied."},
+            {"Ripristino della finestra non confermato.", "Window restoration was not confirmed."},
+            {"Recupero incompleto delle finestre: chiudi e riapri le app interessate prima di riattivare la protezione. File locale: ", "Window recovery is incomplete: fully close and reopen the affected apps before enabling protection again. Local file: "},
+            {"Formato del file di recupero non valido.", "Invalid recovery file format."},
+            {"Identificatore del recupero non valido.", "Invalid recovery identifier."},
+            {"Processo del recupero non valido.", "Invalid recovery process."},
+            {"Finestra del recupero non valida.", "Invalid recovery window."},
+            {"Valori del recupero non validi.", "Invalid recovery values."},
+            {"Nome del file di recupero non valido.", "Invalid recovery file name."},
             {" app memorizzate", " remembered apps"}, {"Stream Privacy · automatico", "Stream Privacy · automatic"},
             {"Stream Privacy · in pausa", "Stream Privacy · paused"}, {"Escluse ", "Excluded "}, {" su ", " of "}
         };

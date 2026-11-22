@@ -62,6 +62,11 @@ namespace StreamPrivacy
             }
         }
 
+        internal string RecoveryDirectory
+        {
+            get { return Path.Combine(Path.GetDirectoryName(path), Path.GetFileName(path) + ".recovery"); }
+        }
+
         internal AppSettings Load()
         {
             if (!File.Exists(path)) return new AppSettings();
